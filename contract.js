@@ -345,21 +345,23 @@ var contract = (function(module) {
             tx_params.data = self.binary;
           }
 
-          // web3 0.9.0 and above calls new this callback twice.
-          // Why, I have no idea...
-          var intermediary = function(err, web3_instance) {
-            if (err != null) {
-              reject(err);
-              return;
+          args.push(tx_params);
+          // don't use new, which requires filter; use sendTransaction & manually poll...
+          const newArgs = args[args.length - 1];
+          newArgs.data = contract_class.new.getData.apply(contract_class, args);
+          self.web3.eth.sendTransaction(newArgs, function (err, tx) {
+            if (err) { throw new Error(err); }
+            function poll() {
+              return self.web3.eth.getTransactionReceipt(tx, function (err, res) {
+                if (res) {
+                  accept(new self(contract_class.at(res.contractAddress)));
+                } else {
+                  setTimeout(poll, 5 * 1000);
+                }
+              })
             }
-
-            if (err == null && web3_instance != null && web3_instance.address != null) {
-              accept(new self(web3_instance));
-            }
-          };
-
-          args.push(tx_params, intermediary);
-          contract_class.new.apply(contract_class, args);
+            setTimeout(poll, 10);
+          });
         });
       });
     },

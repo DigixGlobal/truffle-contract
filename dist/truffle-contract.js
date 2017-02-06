@@ -347,21 +347,23 @@ var contract = (function(module) {
             tx_params.data = self.binary;
           }
 
-          // web3 0.9.0 and above calls new this callback twice.
-          // Why, I have no idea...
-          var intermediary = function(err, web3_instance) {
-            if (err != null) {
-              reject(err);
-              return;
+          args.push(tx_params);
+          // don't use new, which requires filter; use sendTransaction & manually poll...
+          const newArgs = args[args.length - 1];
+          newArgs.data = contract_class.new.getData.apply(contract_class, args);
+          self.web3.eth.sendTransaction(newArgs, function (err, tx) {
+            if (err) { throw new Error(err); }
+            function poll() {
+              return self.web3.eth.getTransactionReceipt(tx, function (err, res) {
+                if (res) {
+                  accept(new self(contract_class.at(res.contractAddress)));
+                } else {
+                  setTimeout(poll, 5 * 1000);
+                }
+              })
             }
-
-            if (err == null && web3_instance != null && web3_instance.address != null) {
-              accept(new self(web3_instance));
-            }
-          };
-
-          args.push(tx_params, intermediary);
-          contract_class.new.apply(contract_class, args);
+            setTimeout(poll, 10);
+          });
         });
       });
     },
@@ -4438,10 +4440,12 @@ exports.kMaxLength = K_MAX_LENGTH
  */
 Buffer.TYPED_ARRAY_SUPPORT = typedArraySupport()
 
-if (!Buffer.TYPED_ARRAY_SUPPORT) {
+if (!Buffer.TYPED_ARRAY_SUPPORT && typeof console !== 'undefined' &&
+    typeof console.error === 'function') {
   console.error(
     'This browser lacks typed array (Uint8Array) support which is required by ' +
-    '`buffer` v5.x. Use `buffer` v4.x if you require old browser support.')
+    '`buffer` v5.x. Use `buffer` v4.x if you require old browser support.'
+  )
 }
 
 function typedArraySupport () {
@@ -5210,7 +5214,6 @@ Buffer.prototype.write = function write (string, offset, length, encoding) {
       encoding = length
       length = undefined
     }
-  // legacy write(string, encoding, offset, length) - remove in v0.13
   } else {
     throw new Error(
       'Buffer.write(string, encoding, offset[, length]) is no longer supported'
@@ -9127,7 +9130,7 @@ module.exports={
         "spec": "0.0.5",
         "type": "version"
       },
-      "/Users/tim/Documents/workspace/Consensys/truffle-contract"
+      "/Users/chris/code/forks/truffle-contract"
     ]
   ],
   "_from": "truffle-contract-schema@0.0.5",
@@ -9161,7 +9164,7 @@ module.exports={
   "_shasum": "5e9d20bd0bf2a27fe94310748249d484eee49961",
   "_shrinkwrap": null,
   "_spec": "truffle-contract-schema@0.0.5",
-  "_where": "/Users/tim/Documents/workspace/Consensys/truffle-contract",
+  "_where": "/Users/chris/code/forks/truffle-contract",
   "author": {
     "name": "Tim Coulter",
     "email": "tim.coulter@consensys.net"
