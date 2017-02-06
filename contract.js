@@ -350,9 +350,10 @@ var contract = (function(module) {
           const newArgs = args[args.length - 1];
           newArgs.data = contract_class.new.getData.apply(contract_class, args);
           self.web3.eth.sendTransaction(newArgs, function (err, tx) {
-            if (err) { throw new Error(err); }
+            if (err) { reject(err); }
             function poll() {
-              return self.web3.eth.getTransactionReceipt(tx, function (err, res) {
+              self.web3.eth.getTransactionReceipt(tx, function (err2, res) {
+                if (err2) { reject(err2); }
                 if (res) {
                   accept(new self(contract_class.at(res.contractAddress)));
                 } else {
