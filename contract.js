@@ -400,7 +400,7 @@ var contract = (function(module) {
 
     deployed: function() {
       var self = this;
-      var val = {}; //this.at(this.address);
+      var val = this.at(this.address);
 
       // Add thennable to allow people to opt into new recommended usage.
       val.then = function(fn) {
